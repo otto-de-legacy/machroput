@@ -9,7 +9,7 @@
 (defprotocol ChronosApi
   (create-new-app [self json]))
 
-(defrecord ChronosConnection [url user password print-fn]
+(defrecord ChronosConnection [url user password ]
   ChronosApi
   (create-new-app [self json]
     (let [json-str (json/write-str json)]
@@ -17,9 +17,8 @@
         (a-json-request self POST "/scheduler/dependency" json-str)
         (a-json-request self POST "/scheduler/iso8601" json-str)))))
 
-(defn new-chronos-connection [{:keys [url user password]} print-fn]
+(defn new-chronos-connection [{:keys [url user password]} ]
   (map->ChronosConnection
     {:url      url
      :user     user
-     :password password
-     :print-fn print-fn}))
+     :password password}))

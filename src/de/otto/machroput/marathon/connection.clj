@@ -79,9 +79,8 @@
     (let [current-deployments (get-deployments self)]
       (is-app-currently-deploying? current-deployments app-id))))
 
-(defn new-marathon-connection [{:keys [url user password]} print-fn]
+(defn new-marathon-connection [{:keys [url user password]}]
   (map->MarathonConnection
     {:url      url
      :user     user
-     :password password
-     :print-fn print-fn}))
+     :password password}))

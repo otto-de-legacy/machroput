@@ -136,7 +136,7 @@
   ([mconf print-fn]
    (map->MarathonDeployment
      {:print-fn               print-fn
-      :mconn                  (mc/new-marathon-connection mconf print-fn)
+      :mconn                  (mc/new-marathon-connection mconf)
       :deploying              (atom false)
       :post-deployment-checks (atom [])
       :app-version-fn         (atom (fn []))

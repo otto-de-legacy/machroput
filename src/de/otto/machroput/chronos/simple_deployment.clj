@@ -18,5 +18,5 @@
    (new-simple-chronos-deployment cconf println))
   ([cconf print-fn]
    (map->SimpleChronosDeployment
-     {:conn     (c/new-chronos-connection cconf print-fn)
+     {:conn     (c/new-chronos-connection cconf)
       :print-fn print-fn})))
