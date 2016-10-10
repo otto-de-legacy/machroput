@@ -22,7 +22,8 @@
   (try
     (@app-version-fn)
     (catch Exception e
-      (print-fn (str "An error occured when trying to execute the current-version-fn " (.getMessage e))))))
+      (print-fn (str "An error occured when trying to execute the current-version-fn " (.getMessage e)))
+      nil)))
 
 (defn app-version-check [{:keys [app-version-fn print-fn deployment-info]}]
   (let [current-version (get-current-version print-fn app-version-fn)
@@ -81,18 +82,28 @@
   (let [current-version (get-current-version print-fn app-version-fn)]
     (print-fn (str "Current version deployed is " (or current-version "not-known") " Your are deploying: " version))))
 
-(defn start-marathon-deployment [{:keys [mconn print-fn app-version-fn] :as self} {app-id :id :as json} version]
-  (let [deployment-ongoing? (mc/deployment-exists-for? mconn app-id)]
-    (assert (= false deployment-ongoing?) "There should not be a deployment already running")
-    (deployment-started! self)
-    (print-deployment-info print-fn app-version-fn json version)
-    (mc/create-new-app mconn json)))
-
 (defn store-deployment-info [deployment-info json version marathon-deploy-version]
   (reset! deployment-info {:version                 version
                            :id                      (:id json)
                            :marathon-deploy-version marathon-deploy-version
                            :instances               (:instances json)}))
+
+(defn handle-running-deployment [{:keys [mconn print-fn app-version-fn deployment-info] :as self} json version]
+  (let [marathon-deploy-version (mc/determine-deployment-version mconn (:id json))]
+    (store-deployment-info deployment-info json version marathon-deploy-version)
+    (if-not (nil? marathon-deploy-version)
+      (wait-for-deployment self)
+      (if (= version (get-current-version print-fn app-version-fn))
+        (print-fn "No deployment started, version to deploy is the same as the one deployed")
+        (throw (RuntimeException. (str "Error: No deployment was started for version " version)))))))
+
+(defn start-marathon-deployment [{:keys [mconn print-fn app-version-fn] :as self} {app-id :id :as json} version]
+  (let [deployment-ongoing? (mc/deployment-exists-for? mconn app-id)]
+    (assert (= false deployment-ongoing?) "There should not be a deployment already running")
+    (deployment-started! self)
+    (print-deployment-info print-fn app-version-fn json version)
+    (mc/create-new-app mconn json)
+    (handle-running-deployment self json version)))
 
 (defprotocol MarathonDeploymentApi
   (with-app-version-check [self fn])
@@ -121,14 +132,9 @@
 
   DeploymentAPI
   (start-deployment [self json version]
-    (start-marathon-deployment self json version)
-    (let [marathon-deploy-version (mc/determine-deployment-version mconn (:id json))]
-      (store-deployment-info deployment-info json version marathon-deploy-version)
-      (if-not (nil? marathon-deploy-version)
-        (wait-for-deployment self)
-        (if (= version (get-current-version print-fn app-version-fn))
-          (print-fn "No deployment started, version to deploy is the same as the one deployed")
-          (throw (RuntimeException. (str "Error: No deployment was started for version " version))))))))
+    (if (= (get-current-version print-fn app-version-fn) version)
+      (print-fn (str "Version " version " is already deployed. Nothing to do."))
+      (start-marathon-deployment self json version))))
 
 (defn new-marathon-deployment
   ([mconf]
