@@ -60,3 +60,16 @@
         (dapi/start-deployment mdepl deployment-json "0.0.1")
         (is (= true @deploying?))
         (is (= [deployment-json] @created-jsons))))))
+
+(deftest wait-for-deployment-test
+  (testing "should abort deployment after configured timeout"
+    (with-redefs [mdep/check-if-deployment-was-successful (constantly nil)]
+      (let [start-time (System/currentTimeMillis)
+            ten-milli-in-min (/ 1 60 100)]
+        (is (thrown? RuntimeException
+                     (mdep/wait-for-deployment {:print-fn  println
+                                                :deploying (atom true)
+                                                :mconf     {:polling-interval-in-millis 0
+                                                            :deployment-timeout-in-min  ten-milli-in-min}})))
+        (let [time-taken (- (System/currentTimeMillis) start-time)]
+          (is (<= time-taken 20)))))))

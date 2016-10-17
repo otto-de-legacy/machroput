@@ -61,19 +61,21 @@
       (print-fn "Deployment was successful!")
       (deployment-done! self))))
 
-(defn max-wait-time-reached [starttime]
-  (let [five-minutes (* 5 60 1000)
+(defn max-wait-time-reached [starttime deployment-timeout-in-min]
+  (let [timeout-as-millis (* deployment-timeout-in-min 60 1000)
         time-taken (- (System/currentTimeMillis) starttime)]
-    (> time-taken five-minutes)))
+    (> time-taken timeout-as-millis)))
 
-(defn wait-for-deployment [{print-fn :print-fn :as self}]
+(defn wait-for-deployment [{:keys [print-fn mconf] :as self}]
   (print-fn "Waiting for deployment to be finished...  ")
-  (let [starttime (System/currentTimeMillis)]
+  (let [polling-interval-in-millis (get mconf :polling-interval-in-millis 2000)
+        deployment-timeout-in-min (get mconf :deployment-timeout-in-min 5)
+        starttime (System/currentTimeMillis)]
     (while (deployment-running? self)
-      (if (max-wait-time-reached starttime)
+      (when (max-wait-time-reached starttime deployment-timeout-in-min)
         (throw (RuntimeException. "The deployment timed out")))
       (check-if-deployment-was-successful self)
-      (Thread/sleep 2000))))
+      (Thread/sleep polling-interval-in-millis))))
 
 (defn print-deployment-info [print-fn app-version-fn json version]
   (print-fn "Starting simple marathon deployment")
@@ -142,6 +144,7 @@
   ([mconf print-fn]
    (map->MarathonDeployment
      {:print-fn               print-fn
+      :mconf                  mconf
       :mconn                  (mc/new-marathon-connection mconf)
       :deploying              (atom false)
       :post-deployment-checks (atom [])

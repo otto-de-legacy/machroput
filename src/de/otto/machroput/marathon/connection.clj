@@ -26,8 +26,8 @@
   (get-app [self app-id])
   (get-app-versions [self app-id])
   (get-app-config [self app-id version])
-  (get-deployments [self])
-  )
+  (get-deployments [self]))
+
 
 (defprotocol MaratohnAPIHelper
   (determine-deployment-version [self app-id])
