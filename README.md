@@ -3,7 +3,7 @@
 This is a simple clojure-library to deploy apps to Marathon or Chronos.  It can be used standalone, but was developed with a [lambdacd](https://github.com/flosell/lambdacd)-integration in mind.
 It is still in an early stage but e.g. already supports some easy post-deployment checks for marathon (like e.g. a task-health-check).
 
-`[de.otto/machroput "0.0.2"]`
+`[de.otto/machroput "0.2.0"]`
 
 ## Features included
 * Deploy Chronos (v2.4.0)
@@ -36,7 +36,11 @@ It is still in an early stage but e.g. already supports some easy post-deploymen
    
 
 (defn deploy-marathon [mconf json version]
-  (-> (msd/new-marathon-deployment mconf)
+  (-> (msd/new-marathon-deployment mconf
+          :print-fn                   (fn []) ;default: println
+          :deployment-timeout-in-min  4       ;default: 5
+          :polling-interval-in-millis 1000    ;default: 2000
+      )
       (msd/with-marathon-task-health-check)
       (msd/with-marathon-app-version-check)
       (msd/with-deployment-stopped-check)
