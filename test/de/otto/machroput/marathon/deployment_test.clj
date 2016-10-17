@@ -67,9 +67,9 @@
       (let [start-time (System/currentTimeMillis)
             ten-milli-in-min (/ 1 60 100)]
         (is (thrown? RuntimeException
-                     (mdep/wait-for-deployment {:print-fn  println
-                                                :deploying (atom true)
-                                                :mconf     {:polling-interval-in-millis 0
-                                                            :deployment-timeout-in-min  ten-milli-in-min}})))
+                     (mdep/wait-for-deployment {:deploying   (atom true)
+                                                :deploy-conf {:print-fn                   println
+                                                              :polling-interval-in-millis 0
+                                                              :deployment-timeout-in-min  ten-milli-in-min}})))
         (let [time-taken (- (System/currentTimeMillis) start-time)]
           (is (<= time-taken 20)))))))

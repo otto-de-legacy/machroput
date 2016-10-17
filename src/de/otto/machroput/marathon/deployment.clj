@@ -66,11 +66,9 @@
         time-taken (- (System/currentTimeMillis) starttime)]
     (> time-taken timeout-as-millis)))
 
-(defn wait-for-deployment [{:keys [print-fn mconf] :as self}]
+(defn wait-for-deployment [{{:keys [print-fn polling-interval-in-millis deployment-timeout-in-min]} :deploy-conf :as self}]
   (print-fn "Waiting for deployment to be finished...  ")
-  (let [polling-interval-in-millis (get mconf :polling-interval-in-millis 2000)
-        deployment-timeout-in-min (get mconf :deployment-timeout-in-min 5)
-        starttime (System/currentTimeMillis)]
+  (let [starttime (System/currentTimeMillis)]
     (while (deployment-running? self)
       (when (max-wait-time-reached starttime deployment-timeout-in-min)
         (throw (RuntimeException. "The deployment timed out")))
@@ -139,14 +137,17 @@
       (start-marathon-deployment self json version))))
 
 (defn new-marathon-deployment
-  ([mconf]
-   (new-marathon-deployment mconf println))
-  ([mconf print-fn]
-   (map->MarathonDeployment
-     {:print-fn               print-fn
-      :mconf                  mconf
-      :mconn                  (mc/new-marathon-connection mconf)
-      :deploying              (atom false)
-      :post-deployment-checks (atom [])
-      :app-version-fn         (atom (fn []))
-      :deployment-info        (atom nil)})))
+  [mconf & {:keys [print-fn deployment-timeout-in-min polling-interval-in-millis]
+            :or   {print-fn                   println
+                   deployment-timeout-in-min  5
+                   polling-interval-in-millis 2000}}]
+  (map->MarathonDeployment
+    {:print-fn               print-fn
+     :deploy-conf            {:print-fn                   print-fn
+                              :deployment-timeout-in-min  deployment-timeout-in-min
+                              :polling-interval-in-millis polling-interval-in-millis}
+     :mconn                  (mc/new-marathon-connection mconf)
+     :deploying              (atom false)
+     :post-deployment-checks (atom [])
+     :app-version-fn         (atom (fn []))
+     :deployment-info        (atom nil)}))
