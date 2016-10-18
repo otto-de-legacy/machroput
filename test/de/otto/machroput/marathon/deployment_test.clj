@@ -9,7 +9,7 @@
 (deftest not-starting-deployments
   (testing "should NOT start a deployment if deployment is still running"
     (let [mdepl (-> (mdep/new-marathon-deployment {})
-                    (mdep/with-app-version-check (constantly "0.0.0"))
+                    (checks/with-app-version-check (constantly "0.0.0"))
                     (assoc :mconn mocks/deployment-running-mock))]
       (is (thrown? Throwable
                    (dapi/start-deployment mdepl {:id "someid"} "0.0.1"))))))
@@ -19,7 +19,7 @@
     (with-redefs [mdep/handle-running-deployment (constantly nil)]
       (let [created-jsons (atom [])
             mdepl (-> (mdep/new-marathon-deployment {})
-                      (mdep/with-app-version-check (constantly "0.0.0"))
+                      (checks/with-app-version-check (constantly "0.0.0"))
                       (assoc :mconn (mocks/catch-app-creations-mock created-jsons)))
             deployment-json {:id "someid"}]
         (dapi/start-deployment mdepl deployment-json "0.0.1")
@@ -66,7 +66,7 @@
 
   (testing "should build a simple deployment with with-app-version-check"
     (let [standard-deployment (-> (mdep/new-marathon-deployment {})
-                                  (mdep/with-app-version-check :foo-check))]
+                                  (checks/with-app-version-check :foo-check))]
       (is (= [checks/app-version-check]
              (get-in standard-deployment [:deploy-conf :post-deployment-checks])))
       (is (= :foo-check
@@ -74,19 +74,19 @@
 
   (testing "should build a simple deployment with with-marathon-task-health-check"
     (let [standard-deployment (-> (mdep/new-marathon-deployment {})
-                                  (mdep/with-marathon-task-health-check))]
+                                  (checks/with-marathon-task-health-check))]
       (is (= [checks/marathon-task-health-check]
              (get-in standard-deployment [:deploy-conf :post-deployment-checks])))))
 
   (testing "should build a simple deployment with with-marathon-app-version-check"
     (let [standard-deployment (-> (mdep/new-marathon-deployment {})
-                                  (mdep/with-marathon-app-version-check))]
+                                  (checks/with-marathon-app-version-check))]
       (is (= [checks/marathon-app-version-check]
              (get-in standard-deployment [:deploy-conf :post-deployment-checks])))))
 
   (testing "should build a simple deployment with with-deployment-stopped-check"
     (let [standard-deployment (-> (mdep/new-marathon-deployment {})
-                                  (mdep/with-deployment-stopped-check))]
+                                  (checks/with-deployment-stopped-check))]
       (is (= [checks/deployment-stopped-check]
              (get-in standard-deployment [:deploy-conf :post-deployment-checks]))))))
 

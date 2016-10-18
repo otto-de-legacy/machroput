@@ -62,14 +62,8 @@
     (mc/create-new-app mconn json)
     (handle-running-deployment self json version)))
 
-(defprotocol MarathonDeploymentApi
-  (with-app-version-check [self fn])
-  (with-marathon-task-health-check [self])
-  (with-marathon-app-version-check [self])
-  (with-deployment-stopped-check [self]))
-
 (defrecord MarathonDeployment [mconn deploy-conf]
-  MarathonDeploymentApi
+  checks/MarathonDeploymentCheckApi
   (with-app-version-check [self app-version-check-fn]
     (-> (update-in self [:deploy-conf :post-deployment-checks] conj checks/app-version-check)
         (update :deploy-conf assoc :app-version-fn app-version-check-fn)))

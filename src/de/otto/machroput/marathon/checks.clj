@@ -1,6 +1,12 @@
 (ns de.otto.machroput.marathon.checks
   (:require [de.otto.machroput.marathon.connection :as mc]))
 
+(defprotocol MarathonDeploymentCheckApi
+  (with-app-version-check [self fn])
+  (with-marathon-task-health-check [self])
+  (with-marathon-app-version-check [self])
+  (with-deployment-stopped-check [self]))
+
 (defn false-check-and-return [print-fn cond msg]
   (when (not cond)
     (print-fn msg))

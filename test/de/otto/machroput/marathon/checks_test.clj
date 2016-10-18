@@ -2,7 +2,8 @@
   (:require
     [de.otto.machroput.marathon.deployment :as mdep]
     [de.otto.machroput.marathon.mocks :as mocks]
-    [clojure.test :refer :all]))
+    [clojure.test :refer :all]
+    [de.otto.machroput.marathon.checks :as checks]))
 
 (def min-as-millis (/ 1 60 1000))
 
@@ -34,7 +35,7 @@
                                             (-> (mdep/new-marathon-deployment {}
                                                                               :deployment-timeout-in-min deployment-timeout-in-min
                                                                               :polling-interval-in-millis 10)
-                                                (mdep/with-app-version-check (fn [] @app-version))
+                                                (checks/with-app-version-check (fn [] @app-version))
                                                 (assoc :mconn (mocks/interactive-deployment-mock deploy-time))))]
 
     (testing "should throw RTException if app-version does not change"
@@ -63,7 +64,7 @@
                                                    (-> (mdep/new-marathon-deployment {}
                                                                                      :deployment-timeout-in-min deployment-timeout-in-min
                                                                                      :polling-interval-in-millis 10)
-                                                       (mdep/with-deployment-stopped-check)
+                                                       (checks/with-deployment-stopped-check)
                                                        (assoc :mconn (mocks/interactive-deployment-mock deploy-time))))]
     (testing "should throw an exception if deployment does not stop in time"
       (is (thrown? RuntimeException
@@ -84,7 +85,7 @@
                                            (-> (mdep/new-marathon-deployment {}
                                                                              :deployment-timeout-in-min deployment-timeout-in-min
                                                                              :polling-interval-in-millis 10)
-                                               (mdep/with-marathon-app-version-check)
+                                               (checks/with-marathon-app-version-check)
                                                (assoc :mconn (mocks/interactive-deployment-mock
                                                                deploy-time
                                                                :app-transition [{:app {:version "marathon-0.0.1"}} {:app {:version "marathon-0.0.2"}}]))))]
@@ -107,7 +108,7 @@
                                                      (-> (mdep/new-marathon-deployment {}
                                                                                        :deployment-timeout-in-min deployment-timeout-in-min
                                                                                        :polling-interval-in-millis 10)
-                                                         (mdep/with-marathon-task-health-check)
+                                                         (checks/with-marathon-task-health-check)
                                                          (assoc :mconn (mocks/interactive-deployment-mock
                                                                          deploy-time
                                                                          :app-transition [{:app {:version        "marathon-0.0.1"
