@@ -1,4 +1,4 @@
-(defproject de.otto/machroput "0.2.0"
+(defproject de.otto/machroput "1.0.0"
   :description "A simple marathon and chronos api written in clojure"
   :url "https://github.com/otto-de/machroput.git"
   :dependencies [[http-kit "2.2.0"]

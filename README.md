@@ -3,7 +3,7 @@
 This is a simple clojure-library to deploy apps to Marathon or Chronos.  It can be used standalone, but was developed with a [lambdacd](https://github.com/flosell/lambdacd)-integration in mind.
 It is still in an early stage but e.g. already supports some easy post-deployment checks for marathon (like e.g. a task-health-check).
 
-`[de.otto/machroput "0.2.0"]`
+`[de.otto/machroput "1.0.0"]`
 
 ## Features included
 * Deploy Chronos (v2.4.0)
@@ -16,6 +16,7 @@ It is still in an early stage but e.g. already supports some easy post-deploymen
 (ns my.name.space
   (:require 
     [de.otto.machroput.deploy-api :as dapi]
+    [de.otto.machroput.marathon.checks :as checks]
     [de.otto.machroput.marathon.deployment :as msd]))
 
 (def sample-marathon-config 
@@ -36,15 +37,17 @@ It is still in an early stage but e.g. already supports some easy post-deploymen
    
 
 (defn deploy-marathon [mconf json version]
-  (-> (msd/new-marathon-deployment mconf
-          :print-fn                   (fn []) ;default: println
-          :deployment-timeout-in-min  4       ;default: 5
-          :polling-interval-in-millis 1000    ;default: 2000
-      )
-      (msd/with-marathon-task-health-check)
-      (msd/with-marathon-app-version-check)
-      (msd/with-deployment-stopped-check)
-      (msd/with-app-version-check (a-fn-returning-your-current-app-version))
+  (-> (msd/new-marathon-deployment
+                     mconf
+                     :print-fn println
+                     :deployment-timeout-in-min 2
+                     :polling-interval-in-millis 1000
+                     :post-deployment-checks []
+                     :app-version-fn (fn []))
+      (checks/with-marathon-task-health-check)
+      (checks/with-marathon-app-version-check)
+      (checks/with-deployment-stopped-check)
+      (checks/with-app-version-check (a-fn-returning-your-current-app-version))
       (dapi/start-deployment json version)))
       
 ; do the actual deployment
@@ -59,15 +62,16 @@ To integrate the deployment with lambdacd do this:
 (ns my.name.space
   (:require 
     [lambdacd.steps.support :as supp]
+    [de.otto.machroput.marathon.checks :as checks]
     [de.otto.machroput.deploy-api :as dapi]
     [de.otto.machroput.marathon.deployment :as msd]))
     
 (defn deploy-marathon [mconf json version print-fn]
-  (-> (msd/new-marathon-deployment mconf print-fn)
-      (msd/with-marathon-task-health-check)
-      (msd/with-marathon-app-version-check)
-      (msd/with-deployment-stopped-check)
-      (msd/with-app-version-check (a-fn-returning-your-current-app-version))
+  (-> (msd/new-marathon-deployment mconf :print-fn print-fn)
+      (checks/with-marathon-task-health-check)
+      (checks/with-marathon-app-version-check)
+      (checks/with-deployment-stopped-check)
+      (checks/with-app-version-check (a-fn-returning-your-current-app-version))
       (dapi/start-deployment json version)))
       
 ;; define lambdacd deployment-step
