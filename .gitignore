@@ -2,3 +2,4 @@
 target
 *.iml
 .lein-failures
+pom.xml*
