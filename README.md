@@ -3,7 +3,10 @@
 This is a simple clojure-library to deploy apps to Marathon or Chronos.  It can be used standalone, but was developed with a [lambdacd](https://github.com/flosell/lambdacd)-integration in mind.
 It is still in an early stage but e.g. already supports some easy post-deployment checks for marathon (like e.g. a task-health-check).
 
-`[de.otto/machroput "1.0.0"]`
+[![Clojars Project](http://clojars.org/de.otto/machroput/latest-version.svg)](http://clojars.org/de.otto/machroput)
+
+[![Build Status](https://travis-ci.org/otto-de/machroput.svg?branch=master)](https://travis-ci.org/otto-de/machroput)
+[![Dependencies Status](http://jarkeeper.com/otto-de/machroput/status.svg)](http://jarkeeper.com/otto-de/machroput)
 
 ## Features included
 * Deploy Chronos (v2.4.0)
