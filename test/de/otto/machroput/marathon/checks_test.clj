@@ -13,7 +13,7 @@
           mdeployment (-> (mdep/new-marathon-deployment {}
                                                         :deployment-timeout-in-min hundred-millis-in-min
                                                         :polling-interval-in-millis 10)
-                          (assoc :mconn (mocks/interactive-deployment-mock 50)))]
+                          (assoc :mconn (mocks/interactive-deployment-mock 10)))]
       (is (= nil (mdep/start-marathon-deployment mdeployment {} "0.0.1"))))))
 
 
@@ -43,7 +43,7 @@
         (is (thrown? RuntimeException
                      (-> (deployment-with-app-version-check
                            :deployment-timeout-in-min (* 30 min-as-millis)
-                           :deploy-time 10
+                           :deploy-time 60
                            :app-version app-version)
                          (mdep/start-marathon-deployment {} "0.0.2"))))))
 
@@ -70,7 +70,7 @@
       (is (thrown? RuntimeException
                    (-> (deployment-with-deployment-stopped-check
                          :deployment-timeout-in-min (* 30 min-as-millis)
-                         :deploy-time 40)
+                         :deploy-time 60)
                        (mdep/start-marathon-deployment {} "0.0.1")))))
 
     (testing "should throw no exception if deployment stops in time"
@@ -93,7 +93,7 @@
       (is (thrown? RuntimeException
                    (-> (deployment-withapp-version-check
                          :deployment-timeout-in-min (* 30 min-as-millis)
-                         :deploy-time 40)
+                         :deploy-time 60)
                        (mdep/start-marathon-deployment {} "0.0.1")))))
 
     (testing "should throw no exception if marathon-app-version-check returns valid response in time"
@@ -123,7 +123,7 @@
       (is (thrown? RuntimeException
                    (-> (deployment-with-marathon-task-health-check
                          :deployment-timeout-in-min (* 30 min-as-millis)
-                         :deploy-time 40)
+                         :deploy-time 60)
                        (mdep/start-marathon-deployment {:instances 1} "0.0.1")))))
 
     (testing "should throw no exception if marathon-task-health-check returns valid response in time"
