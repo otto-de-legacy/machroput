@@ -7,40 +7,27 @@
     [de.otto.machroput.marathon.checks :as checks]))
 
 (deftest not-starting-deployments
-  (testing "should NOT start a deployment if app-version is already present"
-    (let [deploying? (atom false)
-          mdepl (-> (mdep/new-marathon-deployment {})
-                    (mdep/with-app-version-check (constantly "0.0.1"))
-                    (assoc :mconn mocks/no-deployment-mock
-                           :deploying deploying?))]
-      (dapi/start-deployment mdepl {:id "someid"} "0.0.1")
-      (is (= false @deploying?))))
   (testing "should NOT start a deployment if deployment is still running"
-    (let [deploying? (atom false)
-          mdepl (-> (mdep/new-marathon-deployment {})
+    (let [mdepl (-> (mdep/new-marathon-deployment {})
                     (mdep/with-app-version-check (constantly "0.0.0"))
-                    (assoc :mconn mocks/deployment-running-mock
-                           :deploying deploying?))]
+                    (assoc :mconn mocks/deployment-running-mock))]
       (is (thrown? Throwable
                    (dapi/start-deployment mdepl {:id "someid"} "0.0.1"))))))
 
 (deftest starting-deployments
   (testing "should start a new marathon deployment"
     (with-redefs [mdep/handle-running-deployment (constantly nil)]
-      (let [deploying? (atom false)
-            created-jsons (atom [])
+      (let [created-jsons (atom [])
             mdepl (-> (mdep/new-marathon-deployment {})
                       (mdep/with-app-version-check (constantly "0.0.0"))
-                      (assoc :mconn (mocks/catch-app-creations-mock created-jsons)
-                             :deploying deploying?))
+                      (assoc :mconn (mocks/catch-app-creations-mock created-jsons)))
             deployment-json {:id "someid"}]
         (dapi/start-deployment mdepl deployment-json "0.0.1")
-        (is (= true @deploying?))
         (is (= [deployment-json] @created-jsons))))))
 
 (deftest wait-for-deployment-test
   (testing "should abort deployment after configured timeout"
-    (with-redefs [mdep/check-if-deployment-was-successful (constantly nil)]
+    (with-redefs [mdep/all-deployment-checks-successful? (constantly nil)]
       (let [start-time (System/currentTimeMillis)
             ten-milli-in-min (/ 1 60 100)]
         (is (thrown? RuntimeException

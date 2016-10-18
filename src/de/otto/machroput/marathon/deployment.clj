@@ -5,15 +5,6 @@
     [de.otto.machroput.marathon.checks :as checks]
     [clojure.data.json :as json]))
 
-(defn- deployment-started! [{deploying :deploying}]
-  (reset! deploying true))
-
-(defn- deployment-done! [{deploying :deploying}]
-  (reset! deploying false))
-
-(defn- deployment-running? [{deploying :deploying}]
-  @deploying)
-
 (defn get-current-version! [{:keys [print-fn app-version-fn]}]
   (try
     (app-version-fn)
@@ -27,11 +18,9 @@
    :marathon-deploy-version marathon-deploy-version
    :instances               (:instances json)})
 
-(defn check-if-deployment-was-successful [{{:keys [print-fn post-deployment-checks]} :deploy-conf :as self} deploy-info]
-  (when (not-any? false? (map (fn [post-depl-check]
-                                (post-depl-check self deploy-info)) post-deployment-checks))
-    (print-fn "Deployment was successful!")
-    (deployment-done! self)))
+(defn all-deployment-checks-successful? [{{:keys [post-deployment-checks]} :deploy-conf :as self} deploy-info]
+  (->> (map (fn [post-depl-check] (post-depl-check self deploy-info)) post-deployment-checks)
+       (not-any? false?)))
 
 (defn max-wait-time-reached [starttime deployment-timeout-in-min]
   (let [timeout-as-millis (* deployment-timeout-in-min 60 1000)
@@ -41,18 +30,22 @@
 (defn wait-for-deployment [{{:keys [print-fn polling-interval-in-millis deployment-timeout-in-min]} :deploy-conf :as self} deploy-infos]
   (print-fn "Waiting for deployment to be finished...  ")
   (let [starttime (System/currentTimeMillis)]
-    (while (deployment-running? self)
-      (when (max-wait-time-reached starttime deployment-timeout-in-min)
-        (throw (RuntimeException. "The deployment timed out")))
-      (check-if-deployment-was-successful self deploy-infos)
-      (Thread/sleep polling-interval-in-millis))))
+    (loop [success? false]
+      (if success?
+        (print-fn "Deployment was successful!")
+        (do
+          (when (max-wait-time-reached starttime deployment-timeout-in-min)
+            (throw (RuntimeException. "The deployment timed out")))
+          (Thread/sleep polling-interval-in-millis)
+          (recur
+            (all-deployment-checks-successful? self deploy-infos)))))))
 
 (defn print-pre-deployment-infos [{:keys [print-fn] :as deploy-conf} json version]
-    (print-fn "Starting simple marathon deployment")
-    (print-fn (format "Thats your Deploy-JSON for version %s: " version))
-    (print-fn (json/write-str json))
-    (let [current-version (get-current-version! deploy-conf)]
-      (print-fn (str "Current version deployed is " (or current-version "not-known") " Your are deploying: " version))))
+  (print-fn "Starting simple marathon deployment")
+  (print-fn (format "Thats your Deploy-JSON for version %s: " version))
+  (print-fn (json/write-str json))
+  (let [current-version (get-current-version! deploy-conf)]
+    (print-fn (str "Current version deployed is " (or current-version "not-known") " Your are deploying: " version))))
 
 (defn handle-running-deployment [{:keys [mconn print-fn deploy-conf] :as self} json version]
   (if-let [marathon-deploy-version (mc/determine-deployment-version mconn (:id json))]
@@ -64,7 +57,6 @@
 (defn start-marathon-deployment [{:keys [mconn deploy-conf] :as self} {app-id :id :as json} version]
   (let [deployment-ongoing? (mc/deployment-exists-for? mconn app-id)]
     (assert (= false deployment-ongoing?) "There should not be a deployment already running")
-    (deployment-started! self)
     (print-pre-deployment-infos deploy-conf json version)
     (mc/create-new-app mconn json)
     (handle-running-deployment self json version)))
@@ -75,7 +67,7 @@
   (with-marathon-app-version-check [self])
   (with-deployment-stopped-check [self]))
 
-(defrecord MarathonDeployment [print-fn mconn deploying deploy-conf]
+(defrecord MarathonDeployment [print-fn mconn deploy-conf]
   MarathonDeploymentApi
   (with-app-version-check [self app-version-check-fn]
     (-> (update-in self [:deploy-conf :post-deployment-checks] conj checks/app-version-check)
@@ -111,5 +103,4 @@
                    :polling-interval-in-millis polling-interval-in-millis
                    :post-deployment-checks     post-deployment-checks
                    :app-version-fn             app-version-fn}
-     :mconn       (mc/new-marathon-connection mconf)
-     :deploying   (atom false)}))
+     :mconn       (mc/new-marathon-connection mconf)}))
