@@ -88,6 +88,8 @@
       (print-fn (str "Version " version " is already deployed. Nothing to do."))
       (start-marathon-deployment self json version))))
 
+(def default-app-version-fn (fn []))
+
 (defn new-marathon-deployment
   [mconf & {:keys [print-fn deployment-timeout-in-min polling-interval-in-millis
                    post-deployment-checks app-version-fn]
@@ -95,7 +97,7 @@
                    deployment-timeout-in-min  5
                    polling-interval-in-millis 2000
                    post-deployment-checks     []
-                   app-version-fn             (fn [])}}]
+                   app-version-fn             default-app-version-fn}}]
   (map->MarathonDeployment
     {:print-fn    print-fn
      :deploy-conf {:print-fn                   print-fn
@@ -104,3 +106,8 @@
                    :post-deployment-checks     post-deployment-checks
                    :app-version-fn             app-version-fn}
      :mconn       (mc/new-marathon-connection mconf)}))
+
+
+(defn new-marathon-deployment-with-deploy-conf [mconf deploy-conf]
+  (apply (partial new-marathon-deployment mconf)
+         (apply concat (seq deploy-conf))))

@@ -90,3 +90,32 @@
       (is (= [checks/deployment-stopped-check]
              (get-in standard-deployment [:deploy-conf :post-deployment-checks]))))))
 
+
+(deftest initializing-deployments-with-helpers
+  (testing "should initialize a simple deployment with helper methods"
+    (let [print-fn (fn [] :foo)
+          app-version-fn (fn [] :buf)]
+      (is (= (mdep/new-marathon-deployment-with-deploy-conf
+               {:foo :bar}
+               {:print-fn                   print-fn
+                :deployment-timeout-in-min  2
+                :polling-interval-in-millis 1000
+                :post-deployment-checks     [:baz]
+                :app-version-fn             app-version-fn})
+             (mdep/new-marathon-deployment
+               {:foo :bar}
+               :print-fn print-fn
+               :deployment-timeout-in-min 2
+               :polling-interval-in-millis 1000
+               :post-deployment-checks [:baz]
+               :app-version-fn app-version-fn)))
+      (is (= (mdep/new-marathon-deployment-with-deploy-conf
+               {:foo :bar}
+               {:print-fn                   print-fn
+                :app-version-fn             app-version-fn})
+             (mdep/new-marathon-deployment
+               {:foo :bar}
+               :print-fn print-fn
+               :app-version-fn app-version-fn)))
+      (is (= (mdep/new-marathon-deployment-with-deploy-conf {:foo :bar} {})
+             (mdep/new-marathon-deployment {:foo :bar}))))))
