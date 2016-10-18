@@ -18,8 +18,9 @@
    :marathon-deploy-version marathon-deploy-version
    :instances               (:instances json)})
 
-(defn all-deployment-checks-successful? [{{:keys [post-deployment-checks]} :deploy-conf :as self} deploy-info]
-  (->> (map (fn [post-depl-check] (post-depl-check self deploy-info)) post-deployment-checks)
+(defn all-deployment-checks-successful? [{:keys [mconn deploy-conf]} deploy-info]
+  (->> (:post-deployment-checks deploy-conf)
+       (map (fn [check] (check mconn deploy-conf deploy-info)))
        (not-any? false?)))
 
 (defn max-wait-time-reached [starttime deployment-timeout-in-min]
@@ -47,11 +48,11 @@
   (let [current-version (get-current-version! deploy-conf)]
     (print-fn (str "Current version deployed is " (or current-version "not-known") " Your are deploying: " version))))
 
-(defn handle-running-deployment [{:keys [mconn print-fn deploy-conf] :as self} json version]
+(defn handle-running-deployment [{:keys [mconn deploy-conf] :as self} json version]
   (if-let [marathon-deploy-version (mc/determine-deployment-version mconn (:id json))]
     (wait-for-deployment self (build-deployment-info json version marathon-deploy-version))
     (if (= version (get-current-version! deploy-conf))
-      (print-fn "No deployment started, version to deploy is the same as the one deployed")
+      ((:print-fn deploy-conf) "No deployment started, version to deploy is the same as the one deployed")
       (throw (RuntimeException. (str "Error: No deployment was started for version " version))))))
 
 (defn start-marathon-deployment [{:keys [mconn deploy-conf] :as self} {app-id :id :as json} version]
@@ -67,7 +68,7 @@
   (with-marathon-app-version-check [self])
   (with-deployment-stopped-check [self]))
 
-(defrecord MarathonDeployment [print-fn mconn deploy-conf]
+(defrecord MarathonDeployment [mconn deploy-conf]
   MarathonDeploymentApi
   (with-app-version-check [self app-version-check-fn]
     (-> (update-in self [:deploy-conf :post-deployment-checks] conj checks/app-version-check)
@@ -85,7 +86,7 @@
   DeploymentAPI
   (start-deployment [self json version]
     (if (= (get-current-version! deploy-conf) version)
-      (print-fn (str "Version " version " is already deployed. Nothing to do."))
+      ((:print-fn deploy-conf) (str "Version " version " is already deployed. Nothing to do."))
       (start-marathon-deployment self json version))))
 
 (def default-app-version-fn (fn []))
@@ -99,8 +100,7 @@
                    post-deployment-checks     []
                    app-version-fn             default-app-version-fn}}]
   (map->MarathonDeployment
-    {:print-fn    print-fn
-     :deploy-conf {:print-fn                   print-fn
+    {:deploy-conf {:print-fn                   print-fn
                    :deployment-timeout-in-min  deployment-timeout-in-min
                    :polling-interval-in-millis polling-interval-in-millis
                    :post-deployment-checks     post-deployment-checks

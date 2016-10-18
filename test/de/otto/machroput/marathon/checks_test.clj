@@ -19,7 +19,7 @@
 (deftest running-any-post-deployment-checks
   (testing "should start post-deployment-checks on deployment"
     (let [check-started (atom nil)
-          store-check-call-fn (fn [_ _] (reset! check-started :post-deployment-check-started!))
+          store-check-call-fn (fn [_ _ _] (reset! check-started :post-deployment-check-started!))
           mdeployment (-> (mdep/new-marathon-deployment {}
                                                         :deployment-timeout-in-min 1
                                                         :polling-interval-in-millis 10
