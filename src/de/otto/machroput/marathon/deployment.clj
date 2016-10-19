@@ -62,6 +62,16 @@
     (mc/create-new-app mconn json)
     (handle-running-deployment self json version)))
 
+(def default-app-version-fn (fn []))
+
+(defn deploy-conf-str
+  [{:keys [print-fn deployment-timeout-in-min polling-interval-in-millis post-deployment-checks app-version-fn]}]
+  (str "deployment-timeout-in-min: " deployment-timeout-in-min " "
+       "polling-interval-in-millis: " polling-interval-in-millis " "
+       "nr-of-post-deployment-checks: " (count post-deployment-checks) " "
+       "app-version-fn?: " (not (= app-version-fn default-app-version-fn)) " "
+       "custom-print-fn?: " (not (= println print-fn))))
+
 (defrecord MarathonDeployment [mconn deploy-conf]
   checks/MarathonDeploymentCheckApi
   (with-app-version-check [self app-version-check-fn]
@@ -79,11 +89,10 @@
 
   DeploymentAPI
   (start-deployment [self json version]
+    ((:print-fn deploy-conf) (str "Using Deploy-Conf: " (deploy-conf-str deploy-conf)))
     (if (= (get-current-version! deploy-conf) version)
       ((:print-fn deploy-conf) (str "Version " version " is already deployed. Nothing to do."))
       (start-marathon-deployment self json version))))
-
-(def default-app-version-fn (fn []))
 
 (defn new-marathon-deployment
   [mconf & {:keys [print-fn deployment-timeout-in-min polling-interval-in-millis
