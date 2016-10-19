@@ -34,7 +34,7 @@
             (format "Task Check was NOT ok! running: %s healthy: %s unhealthy: %s" tasksRunning tasksHealthy tasksUnhealthy))))
 
 (defn marathon-app-version-check [mconn {:keys [print-fn]} {:keys [id marathon-deploy-version]}]
-  (let [{{current-app-version :version} :app} (mc/get-app mconn (:id id))]
+  (let [{{current-app-version :version} :app} (mc/get-app mconn id)]
     (fcheck print-fn
             (= current-app-version marathon-deploy-version)
             (format "Marathon-Deploy-Version Check was NOT ok! App is not running latest deployment-version %s: %s" marathon-deploy-version current-app-version))))
