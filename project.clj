@@ -1,4 +1,4 @@
-(defproject de.otto/machroput "1.0.5-SNAPSHOT"
+(defproject de.otto/machroput "1.1.0"
   :description "A simple marathon and chronos api written in clojure"
   :license {:name "Apache License 2.0" :url  "http://www.apache.org/license/LICENSE-2.0.html"}
 
