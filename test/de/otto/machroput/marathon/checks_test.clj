@@ -11,22 +11,22 @@
 (deftest running-deployments-without-any-check
   (testing "should throw no exception if no post-deployment-check is configured"
     (let [hundred-millis-in-min (* min-as-millis 100)
-          mdeployment (-> (mdep/new-marathon-deployment {}
-                                                        :deployment-timeout-in-min hundred-millis-in-min
-                                                        :polling-interval-in-millis 10)
-                          (assoc :mconn (mocks/interactive-deployment-mock 10)))]
+          mdeployment           (-> (mdep/new-marathon-deployment {}
+                                                                  :deployment-timeout-in-min hundred-millis-in-min
+                                                                  :polling-interval-in-millis 10)
+                                    (assoc :mconn (mocks/interactive-deployment-mock 10)))]
       (is (= nil (mdep/start-marathon-deployment mdeployment {} "0.0.1"))))))
 
 
 (deftest running-any-post-deployment-checks
   (testing "should start post-deployment-checks on deployment"
-    (let [check-started (atom nil)
+    (let [check-started       (atom nil)
           store-check-call-fn (fn [_ _ _] (reset! check-started :post-deployment-check-started!))
-          mdeployment (-> (mdep/new-marathon-deployment {}
-                                                        :deployment-timeout-in-min 1
-                                                        :polling-interval-in-millis 10
-                                                        :post-deployment-checks [store-check-call-fn])
-                          (assoc :mconn (mocks/interactive-deployment-mock 100)))]
+          mdeployment         (-> (mdep/new-marathon-deployment {}
+                                                                :deployment-timeout-in-min 1
+                                                                :polling-interval-in-millis 10
+                                                                :post-deployment-checks [store-check-call-fn])
+                                  (assoc :mconn (mocks/interactive-deployment-mock 100)))]
       (mdep/start-marathon-deployment mdeployment {} "0.0.1")
       (is (= :post-deployment-check-started! @check-started)))))
 
@@ -136,15 +136,18 @@
 
 (deftest marathon-app-version-check-unit
   (testing "should call api with id and print error and return false"
-    (let [call (atom :no-call)
+    (let [call             (atom :no-call)
           error-print-call (atom :no-call)]
       (with-redefs [mc/get-app (fn [_ id] (reset! call id))]
         (is (= false (checks/marathon-app-version-check {} {:print-fn (fn [e] (reset! error-print-call e))} {:id "123" :marathon-deploy-version "000"})))
         (is (= "123" @call))
-        (is (= "Marathon-Deploy-Version Check was NOT ok! App is not running latest deployment-version 000: null" @error-print-call)))))
+        (is (= (str "Marathon-Deploy-Version Check was NOT ok!\n"
+                    "App is not running latest deployment-version\n"
+                    "Currently running:      'null'\n"
+                    "Deployed with Marathon: '000'") @error-print-call)))))
 
   (testing "should call api with id and print no error and return true"
-    (let [call (atom :no-call)
+    (let [call             (atom :no-call)
           error-print-call (atom :no-call)]
       (with-redefs [mc/get-app (fn [_ id] (reset! call id)
                                  {:app {:version "000"}})]
@@ -154,7 +157,7 @@
 
 (deftest deployment-stopped-check-unit
   (testing "should call api with id and print error and return false"
-    (let [call (atom :no-call)
+    (let [call             (atom :no-call)
           error-print-call (atom :no-call)]
       (with-redefs [mc/deployment-still-running? (fn [_ depl-version] (reset! call depl-version))]
         (is (= false (checks/deployment-stopped-check {} {:print-fn (fn [e] (reset! error-print-call e))} {:marathon-deploy-version "000"})))
@@ -162,7 +165,7 @@
         (is (= "Marathon-Deployment Check was NOT ok! The started Marathon-deployment is still running" @error-print-call)))))
 
   (testing "should call api with id and print no error and return true"
-    (let [call (atom :no-call)
+    (let [call             (atom :no-call)
           error-print-call (atom :no-call)]
       (with-redefs [mc/deployment-still-running? (fn [_ depl-version] (reset! call depl-version)
                                                    false)]
@@ -172,15 +175,16 @@
 
 (deftest marathon-task-health-check-unit
   (testing "should call api with id and print error and return false"
-    (let [call (atom :no-call)
+    (let [call             (atom :no-call)
           error-print-call (atom :no-call)]
       (with-redefs [mc/get-app (fn [_ id] (reset! call id))]
         (is (= false (checks/marathon-task-health-check {} {:print-fn (fn [e] (reset! error-print-call e))} {:id "123" :instances 1})))
         (is (= "123" @call))
-        (is (= "Task Check was NOT ok! running: null healthy: null unhealthy: null" @error-print-call)))))
+        (is (= (str "Task Check was NOT ok!\n"
+                    "Running: null Healthy: null Unhealthy: null") @error-print-call)))))
 
   (testing "should call api with id and print no error and return true"
-    (let [call (atom :no-call)
+    (let [call             (atom :no-call)
           error-print-call (atom :no-call)]
       (with-redefs [mc/get-app (fn [_ id] (reset! call id)
                                  {:app {:tasksUnhealthy 0
@@ -192,16 +196,18 @@
 
 (deftest app-version-check-unit
   (testing "should call app-version-fn and print error and return false"
-    (let [call (atom :no-call)
+    (let [call             (atom :no-call)
           error-print-call (atom :no-call)]
       (is (= false (checks/app-version-check {} {:app-version-fn (fn [] (reset! call :call)) :print-fn (fn [e] (reset! error-print-call e))} {:version "0.0.1"})))
       (is (= :call @call))
-      (is (= "Version Check NOT ok! Found version :call on status page and not 0.0.1" @error-print-call))))
+      (is (= (str "Version Check was NOT ok!\n"
+                  "Actual:   ':call' on status page\n"
+                  "Expected: '0.0.1' after deployment") @error-print-call))))
 
   (testing "should call app-version-fn and print no error and return true"
-    (let [call (atom :no-call)
+    (let [call             (atom :no-call)
           error-print-call (atom :no-call)]
       (is (= true (checks/app-version-check {} {:app-version-fn (fn [] (reset! call :call)
-                                                                   "0.0.1") :print-fn (fn [e] (reset! error-print-call e))} {:version "0.0.1"})))
+                                                                  "0.0.1") :print-fn (fn [e] (reset! error-print-call e))} {:version "0.0.1"})))
       (is (= :call @call))
       (is (= :no-call @error-print-call)))))
