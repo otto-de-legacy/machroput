@@ -57,7 +57,7 @@
 
 (defn start-marathon-deployment [{:keys [mconn deploy-conf] :as self} {app-id :id :as json} version]
   (let [deployment-ongoing? (mc/deployment-exists-for? mconn app-id)]
-    (assert (= false deployment-ongoing?) "There should not be a deployment already running")
+    (when deployment-ongoing? (throw (IllegalStateException. "There should not be a deployment already running")))
     (print-pre-deployment-infos deploy-conf json version)
     (mc/create-new-app mconn json)
     (handle-running-deployment self json version)))

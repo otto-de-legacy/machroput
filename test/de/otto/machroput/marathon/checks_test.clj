@@ -4,7 +4,8 @@
     [de.otto.machroput.marathon.mocks :as mocks]
     [clojure.test :refer :all]
     [de.otto.machroput.marathon.checks :as checks]
-    [de.otto.machroput.marathon.connection :as mc]))
+    [de.otto.machroput.marathon.connection :as mc])
+  (:import (de.otto.machroput.marathon.connection MaratohnAPIHelper)))
 
 (def min-as-millis (/ 1 60 1000))
 
@@ -16,6 +17,17 @@
                                                                   :polling-interval-in-millis 10)
                                     (assoc :mconn (mocks/interactive-deployment-mock 10)))]
       (is (= nil (mdep/start-marathon-deployment mdeployment {} "0.0.1"))))))
+
+(defrecord TestMarathonAPIHelper []
+  MaratohnAPIHelper
+  (determine-deployment-version [_ _] nil)
+  (deployment-still-running? [_ _] nil)
+  (deployment-exists-for? [_ _] true))
+
+(deftest running-deployments-without-any-check
+  (testing "should throw an exception if a deployment is already ongoing"
+    (let [self {:mconn (map->TestMarathonAPIHelper {})}]
+      (is (thrown? IllegalStateException (mdep/start-marathon-deployment self nil nil))))))
 
 
 (deftest running-any-post-deployment-checks
